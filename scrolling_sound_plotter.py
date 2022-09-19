@@ -2,6 +2,7 @@ import numpy as np
 import pyaudio
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
+import wave
 plt.style.use('dark_background')
 
 BUFFER_SIZE = 1024  # Samples per buffer: How many samples to group in one buffer for processing(chunk size)
@@ -17,7 +18,7 @@ p = pyaudio.PyAudio()
 stream=p.open(format=pyaudio.paInt16,channels=1,rate=SAMPLE_RATE,input=True,
               frames_per_buffer=BUFFER_SIZE)
 
-animate_flag = True # Plots one buffer from the mic if False. Plots mic input in real time if True
+live_mode = True # Plots mic input in real time True
 
 fig, ax = plt.subplots(2, 1, figsize=(8,6))
 
@@ -27,14 +28,15 @@ t = 0
 x = np.linspace(t, t + SAMPLE_TIME * (BUFFER_SIZE-1), BUFFER_SIZE)
 y = np.frombuffer(stream.read(BUFFER_SIZE), dtype=np.int16)
 
-#Amplitudes can go up to 2^15 (in case of signed int16) if the MIC volume is set to max, otherwise signals will be clipped at the mic volume level.
-ax[0].set_ylim((-10000, 10000))
-if animate_flag:
-    #ax[0].set_xlim(0, PLOT_WINDOW_SIZE-1)
+#Amplitudes can go up to 2^15 (in case of signed int16) if the MIC volume is set to max
+#otherwise signals will be clipped at the mic volume level.
+ax[0].set_ylim((-2**15, 2**15))
+
+if live_mode:
     ax[0].set_xlim(0, t + SAMPLE_TIME * (PLOT_WINDOW_SIZE-1))
-else:
-    #ax[0].set_xlim(0, BUFFER_SIZE-1)
-    ax[0].set_xlim(0, t + SAMPLE_TIME * (BUFFER_SIZE-1))
+#else:
+# setting for one buffer plotting
+#    ax[0].set_xlim(0, t + SAMPLE_TIME * (BUFFER_SIZE-1))
 
 ax[0].set_ylabel('Amplitude')
 ax[0].tick_params(labelbottom=False)
@@ -78,15 +80,41 @@ def animate(i):
     y = np.hstack([y,y_new])[-PLOT_WINDOW_SIZE:]
     return line, im,
 
-if animate_flag:
-    # Real time plotting: Each animation frame is one audio buffer
+def extract_data_from_file(filename):
+    """
+    Returns numpy arrays containing left/right channels, time data and sample rate.
+    """
+    wav_obj = wave.open(filename, 'rb')
+    sample_rate = wav_obj.getframerate()
+
+    sample_count = wav_obj.getnframes()
+    file_length = sample_count/sample_rate
+
+    n_channels = wav_obj.getnchannels()
+
+    file_buffer = wav_obj.readframes(sample_count)
+
+    signal_np = np.frombuffer(file_buffer, dtype=np.int16)
+
+    l_channel = signal_np[0::2]
+    r_channel = signal_np[1::2]
+
+    times = np.linspace(0, file_length-1, num=sample_count)
+    return l_channel, r_channel, times, sample_rate
+
+if live_mode:
+    # Real time plotting with scrolling
     anim = FuncAnimation(fig, animate, init_func=init, interval=1, blit=True)
 else:
-    # Record one buffer and plot it
+    # Plot a wav file
     #y = np.frombuffer(stream.read(BUFFER_SIZE), dtype=np.int16)
-    line.set_data(x, y)
-    spec, freq, t, im = ax[1].specgram(y, Fs=SAMPLE_RATE, vmin=dB_min, vmax=dB_max, cmap='jet', mode='magnitude')
-    print(t[-1], x[-1], t.shape, x.shape,"\n", t)
+    #line.set_data(x, y)
+    #spec, freq, t, im = ax[1].specgram(y, Fs=SAMPLE_RATE, vmin=dB_min, vmax=dB_max, cmap='jet', mode='magnitude')
+    #print(t[-1], x[-1], t.shape, x.shape,"\n", t)
+    l, r, t, sample_rate = extract_data_from_file('./gtr-dist-yes.wav')
+    ax[0].set_xlim(0, t[-1])
+    line.set_data(t, l)
+    spec, freq, t, im = ax[1].specgram(l, Fs=sample_rate, vmin=dB_min, vmax=dB_max, cmap='jet', mode='magnitude')
 
 plt.show()
 
