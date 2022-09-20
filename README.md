@@ -3,9 +3,12 @@ A repo to play around with audio and DSP in general.
 
 ## sound_visualizer.py:
 A script to plot time domain and frequency domain(spectrogram) graphs of audio signals.
-- Support input:
+- Supported input:
   - Real time mic audio
   - Data from a `16bit` WAV audio file
+- Realt time output examples (scrolling mode and one buffer at a time mode)
+
+<img src="./readme_images/rt_buffer.gif" width="500" /> <img src="./readme_images/rt_scrolling.gif" width="500" />
 
 ## :hammer_and_wrench:Setup/ Preparation
 1) Make sure you have
@@ -39,3 +42,5 @@ Each animation frame in the plots will represent one data buffer
 ```bash
 python sound_visualizer.py -f <filename>
 ```
+
+<img src="./readme_images/file_mode.png" width="500" />
