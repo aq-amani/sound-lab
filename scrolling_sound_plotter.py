@@ -3,6 +3,7 @@ import pyaudio
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import wave
+import argparse
 plt.style.use('dark_background')
 
 BUFFER_SIZE = 1024  # Samples per buffer: How many samples to group in one buffer for processing(chunk size)
@@ -15,18 +16,15 @@ PLOT_WINDOW_SIZE = BUFFER_SIZE*100
 dB_min = -96
 dB_max = 96 # For 16bit audio. 20* log(2^16 - 1)
 
-live_mode = True # Plots mic input in real time if True. Otherwise plots a wav file.
-scrolling = True # Used with live mode to scroll older time samples to the left. Otherwise, the realtime plot only shows one buffer data at a time.
-
 # PyAudio and stream global variables to use in case of live mode
 p = None
 stream = None
 
-# t, x, y global variables to use in case of live mode
+# t, x, y, scrolling global variables to use in case of live mode
 t = None
 x = None
 y = None
-
+scrolling = True
 # Two rows each with one subplot
 fig, ax = plt.subplots(2, 1, figsize=(8,6))
 #Time domain plot and freq domain spectrogram initialization
@@ -101,10 +99,19 @@ def extract_data_from_file(filename, channel=0):
 def main():
     global x, y, t
     global p, stream
-    #parser = argparse.ArgumentParser(description='sound_visualizer.py: A script to visualize sound in time and frequency domains')
-    #parser.add_argument('-f','--file', help='Show a reference piano keyboard', action ='store_true', metavar = '')
-    #parser.add_argument('-s','--scroll', help='Runs live mode with scrolling over time', action ='store_true', metavar = '')
+    global scrolling
+    parser = argparse.ArgumentParser(description='sound_visualizer.py: A script to visualize sound in time and frequency domains')
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('-f','--file', help=f'Run in file mode. Plots the wav audio file fed to this flag. No animation', type = str, metavar = '')
+    group.add_argument('-b','--buffer', help='Plots only one buffer at each time step. Use this to disable scrolling.', action ='store_true', default=False)
+
+    args = vars(parser.parse_args())
+    live_mode = True if args['file'] is None else False
+    scrolling = not args['buffer']
+    file_name = args['file']
+
     if live_mode:
+        # Plots mic input in real time if True
         # PyAudio and stream setup
         p = pyaudio.PyAudio()
         stream=p.open(format=pyaudio.paInt16,channels=1,rate=SAMPLE_RATE,input=True,
@@ -131,8 +138,9 @@ def main():
     else:
         # File mode
         fig.canvas.manager.set_window_title('Sound visualizer: File mode')
-        amplitudes, times, sample_rate = extract_data_from_file('./gtr-dist-yes.wav')
+        amplitudes, times, sample_rate = extract_data_from_file(file_name)
         ax[0].set_xlim(0, times[-1])
+        ax[0].set_title(f'File: {file_name}')
         line.set_data(times, amplitudes)
         spec, freq, t, im = ax[1].specgram(amplitudes, Fs=sample_rate, vmin=dB_min, vmax=dB_max, cmap='jet', mode='magnitude')
         plt.show()
