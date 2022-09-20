@@ -8,7 +8,7 @@ A script to plot time domain and frequency domain(spectrogram) graphs of audio s
   - Data from a `16bit` WAV audio file
 - Realt time output examples (scrolling mode and one buffer at a time mode)
 
-<img src="./readme_images/rt_buffer.gif" width="500" /> <img src="./readme_images/rt_scrolling.gif" width="500" />
+<img src="./readme_images/rt_buffer.gif" width="400" /> <img src="./readme_images/rt_scrolling.gif" width="400" />
 
 ## :hammer_and_wrench:Setup/ Preparation
 1) Make sure you have
@@ -34,7 +34,7 @@ python sound_visualizer.py
 #### Plot mic input in real time without scrolling
 Each animation frame in the plots will represent one data buffer
 ```bash
-python sound_visualizer.py
+python sound_visualizer.py -b
 ```
 
 #### Plot a 16-bit wav file
